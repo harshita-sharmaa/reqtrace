@@ -28,7 +28,13 @@ function freshState() {
     audit: [],
     settings: { routing: false, requireGl: false, dupCheck: false, autoPo: false, threeWay: false },
     role: "requester:Facilities",
+    ui: freshUi(),
   };
+}
+
+// What the person has done on screen, read by the recording guide (guide.html) to move to the next step.
+function freshUi() {
+  return { route: "dashboard", visited: ["dashboard"], seen: [], formErrors: [], dupWarned: false };
 }
 
 let state = load();
@@ -36,7 +42,11 @@ let state = load();
 function load() {
   try {
     const raw = localStorage.getItem(STORE_KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const s = JSON.parse(raw);
+      s.ui = s.ui || freshUi();
+      return s;
+    }
   } catch (e) { /* storage blocked: fall back to seed */ }
   return freshState();
 }
@@ -225,6 +235,8 @@ function render() {
   const route = (location.hash.replace("#/", "") || "dashboard").split("?")[0];
   const allowed = navItems().map((n) => n[0]);
   const view = allowed.includes(route) ? route : "dashboard";
+  state.ui.route = view;
+  if (!state.ui.visited.includes(view)) state.ui.visited.push(view);
   renderNav(view);
   $("#view").innerHTML = VIEWS[view]();
   if (VIEWS[view].after) VIEWS[view].after();
@@ -382,11 +394,14 @@ VIEWS.new.after = () => {
     if (!(amount > 0)) errors.amount = "Enter an amount greater than 0.";
     if (state.settings.requireGl && !draft.gl) errors.gl = "Select a GL code.";
     draft.errors = errors;
+    state.ui.formErrors = Object.keys(errors);
     if (Object.keys(errors).length) return render();
     const role = parseRole();
     const candidate = { department: role.dept, item: draft.item.trim(), amount };
     const dups = state.settings.dupCheck ? findDuplicates(candidate) : [];
     if (dups.length) {
+      state.ui.dupWarned = true;
+      save();
       return confirmModal(
         "Possible duplicate",
         `<p>${esc(role.dept)} already has ${dups.length === 1 ? "a request" : "requests"} for <b>${esc(candidate.item)}</b> at a similar amount:</p>
@@ -557,9 +572,11 @@ VIEWS.settings = () => `
 VIEWS.settings.after = () => {
   $("#reset").onclick = () =>
     confirmModal("Reset demo data?", "<p>All changes made in this browser will be lost.</p>", "Reset", () => {
-      const role = state.role;
+      const { role } = state;
+      const lastCmd = state.ui.cmd;
       state = freshState();
       state.role = role;
+      state.ui.cmd = lastCmd;
       draft = null;
       toast("Demo data reset");
       render();
@@ -609,6 +626,10 @@ function openDrawer(id) {
     <ul class="timeline">${events.map((e) => `<li><div class="when">${fmtDate(e.when)}</div>${esc(e.what)}</li>`).join("")}</ul>
     <div class="actions">${acts.join("")}</div>`;
   d.hidden = false;
+  if (!state.ui.seen.includes(id)) {
+    state.ui.seen.push(id);
+    save();
+  }
   $("#close-drawer").onclick = closeDrawer;
 }
 
@@ -791,6 +812,26 @@ $("#role").addEventListener("change", (ev) => {
   render();
   toast(`Signed in as ${actorName()}`);
 });
+// The recording guide starts a clip by writing a command: reset the data, then set role, controls and screen.
+const CMD_KEY = "westbridge-command";
+function checkCommand() {
+  let cmd;
+  try { cmd = JSON.parse(localStorage.getItem(CMD_KEY) || "null"); } catch (e) { return; }
+  if (!cmd || cmd.id === state.ui.cmd) return;
+  state = freshState();
+  state.role = cmd.role;
+  Object.assign(state.settings, cmd.settings || {});
+  state.ui.cmd = cmd.id;
+  draft = null;
+  closeDrawer();
+  $("#modal").hidden = true;
+  $("#role").innerHTML = roleOptions();
+  goTo(cmd.route || "dashboard");
+  render();
+}
+window.addEventListener("storage", (ev) => { if (ev.key === CMD_KEY) checkCommand(); });
+setInterval(checkCommand, 700);
+
 window.addEventListener("hashchange", () => {
   closeDrawer();
   render();
