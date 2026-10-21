@@ -68,7 +68,7 @@ const CLIPS = [
       {
         do: "Click <b>Hold</b> on INV-5040 (second row).",
         say: [
-          "Refund logged; the status shows Recovery requested.",
+          "Refund logged; the payment now shows Refund requested.",
           "INV-5040, Office Depot: an $8,706 invoice against an $87,062 PO. Same pattern.",
           "It's not paid yet, and Pay is clickable. Nothing stops an $87K payment.",
           "I'll hold it rather than fix the PO on the fly, because changing a PO should be a deliberate step.",

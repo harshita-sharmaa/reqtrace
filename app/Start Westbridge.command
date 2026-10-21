@@ -15,9 +15,9 @@ fi
 CHROME="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 if [ -x "$CHROME" ]; then
   # App on the left (this is what you record), guide on the right.
-  "$CHROME" --user-data-dir="$HOME/.westbridge-chrome" --no-first-run --no-default-browser-check --app="$URL/index.html" --window-position=0,25 --window-size=1060,880 >/dev/null 2>&1 &
+  "$CHROME" --user-data-dir="$HOME/.westbridge-chrome" --no-first-run --no-default-browser-check --force-device-scale-factor=1.7 --app="$URL/index.html" --window-position=0,25 --window-size=1060,880 >/dev/null 2>&1 &
   sleep 1
-  "$CHROME" --user-data-dir="$HOME/.westbridge-chrome" --no-first-run --no-default-browser-check --app="$URL/guide.html" --window-position=1065,25 --window-size=405,880 >/dev/null 2>&1 &
+  "$CHROME" --user-data-dir="$HOME/.westbridge-chrome" --no-first-run --no-default-browser-check --force-device-scale-factor=1.7 --app="$URL/guide.html" --window-position=1065,25 --window-size=405,880 >/dev/null 2>&1 &
 else
   open "$URL/index.html"
   open "$URL/guide.html"

@@ -169,8 +169,8 @@ function findDuplicates(draft) {
 function matchStatus(inv) {
   const r = reqById(inv.request);
   const po = state.pos.find((p) => p.po && p.po === inv.po);
-  if (inv.status === "Paid" && inv.paid_amount > inv.amount + 0.01) return { key: "overpaid", label: "Overpaid", cls: "bad", diff: inv.paid_amount - inv.amount };
-  if (inv.status === "Paid" && inv.paid_amount < inv.amount - 0.01) return { key: "underpaid", label: "Underpaid", cls: "warn", diff: inv.amount - inv.paid_amount };
+  if (inv.paid_amount > inv.amount + 0.01) return { key: "overpaid", label: "Overpaid", cls: "bad", diff: inv.paid_amount - inv.amount };
+  if (inv.paid_amount > 0 && inv.paid_amount < inv.amount - 0.01) return { key: "underpaid", label: "Underpaid", cls: "warn", diff: inv.amount - inv.paid_amount };
   if (!po) return { key: "nopo", label: "No PO", cls: "bad" };
   const tol = Math.max(50, inv.amount * 0.02);
   if (Math.abs(po.amount - inv.amount) > tol || Math.abs(po.amount - r.amount) > tol) return { key: "mismatch", label: "Amount mismatch", cls: "bad", diff: po.amount - inv.amount };
@@ -451,9 +451,9 @@ VIEWS.approvals = () => {
     <p class="sub">${q.length} waiting for ${esc(actorName())} · oldest first</p>
     ${!state.settings.routing && parseRole().type === "manager" ? `<div class="banner warn">Amount-based routing is off: your approval is final, whatever the amount.</div>` : ""}
     <div class="panel">
-      ${q.length ? `<table><thead><tr><th>Request</th><th>Submitted</th><th>Department</th><th>Item</th><th>Vendor</th><th class="num">Amount</th><th>GL</th><th class="num">Waiting</th><th></th></tr></thead><tbody>
+      ${q.length ? `<table><thead><tr><th>Request</th><th>Item · vendor</th><th class="num">Amount</th><th>GL</th><th class="num">Waiting</th><th></th></tr></thead><tbody>
         ${q.map((r) => `<tr>
-          <td><a href="#" data-open="${r.id}"><b>${r.id}</b></a></td><td>${fmtDate(r.submitted)}</td><td>${esc(r.department)}</td><td>${esc(r.item)}</td><td>${esc(r.vendor)}</td>
+          <td><a href="#" data-open="${r.id}"><b>${r.id}</b></a><div class="sub2">${esc(r.department)}</div></td><td>${esc(r.item)}<div class="sub2">${esc(r.vendor)}</div></td>
           <td class="num">${money(r.amount)}${r.amount >= THRESHOLD ? ' <span class="pill info">≥ $5K</span>' : ""}</td><td>${r.gl || '<span class="pill warn">None</span>'}</td>
           <td class="num">${days(r.submitted, TODAY) > 5 ? `<span class="diff">${days(r.submitted, TODAY)} d</span>` : days(r.submitted, TODAY) + " d"}</td>
           <td><div class="actions" style="margin:0"><button class="btn small ok" data-approve="${r.id}">Approve</button><button class="btn small danger" data-reject="${r.id}">Reject</button></div></td></tr>`).join("")}
@@ -473,11 +473,11 @@ VIEWS.pos = () => {
       const r = reqById(p.request);
       const off = Math.abs(p.amount - r.amount) > 0.01;
       return `<tr>
-        <td><b>${esc(p.po)}</b></td><td><a href="#" data-open="${r.id}">${r.id}</a></td><td>${esc(r.vendor)}</td>
-        <td class="num">${money(r.amount)}</td><td class="num ${off ? "diff" : ""}">${money(p.amount)}${off ? " ⚠" : ""}</td>
+        <td><b>${esc(p.po)}</b><div class="sub2">${fmtDate(p.entered)}</div></td><td><a href="#" data-open="${r.id}">${r.id}</a><div class="sub2">${esc(r.vendor)}</div></td>
+        <td class="num">${money(r.amount)}</td>
+        <td class="num ${off ? "diff" : ""}">${money(p.amount)}${off ? " ⚠" : ""}${off && !p.paid ? `<div style="margin-top:4px"><button class="btn small" data-fixpo="${esc(p.po)}">Correct amount</button></div>` : ""}</td>
         <td>${p.gl ? esc(p.gl) : `<button class="btn small" data-setgl="${esc(p.po)}">Add GL</button>`}</td>
-        <td>${fmtDate(p.entered)}</td><td>${p.paid ? '<span class="pill ok">Paid</span>' : '<span class="pill muted">Unpaid</span>'}</td>
-        <td>${off && !p.paid ? `<button class="btn small" data-fixpo="${esc(p.po)}">Correct amount</button>` : ""}</td></tr>`;
+        <td>${p.paid ? '<span class="pill ok">Paid</span>' : '<span class="pill muted">Unpaid</span>'}</td></tr>`;
     })
     .join("");
   return `
@@ -488,7 +488,7 @@ VIEWS.pos = () => {
       ${missing.map((r) => `<tr><td><a href="#" data-open="${r.id}"><b>${r.id}</b></a></td><td>${fmtDate(r.decided)}</td><td>${esc(r.department)}</td><td>${esc(r.vendor)}</td><td class="num">${money(r.amount)}</td><td><button class="btn small primary" data-createpo="${r.id}">Create PO</button></td></tr>`).join("")}
       </tbody></table></div>` : ""}
     <div class="panel"><div class="panel-head"><h2>PO log</h2><button class="btn" id="export-po">Export CSV</button></div>
-      <div style="overflow-x:auto"><table><thead><tr><th>PO</th><th>Request</th><th>Vendor</th><th class="num">Approved</th><th class="num">PO amount</th><th>GL code</th><th>Entered</th><th>Payment</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+      <div style="overflow-x:auto"><table><thead><tr><th>PO · entered</th><th>Request · vendor</th><th class="num">Approved</th><th class="num">PO amount</th><th>GL code</th><th>Payment</th></tr></thead><tbody>${rows}</tbody></table></div>
     </div>`;
 };
 VIEWS.pos.after = () => {
@@ -510,13 +510,13 @@ VIEWS.invoices = () => {
 };
 
 function invoiceTable(list) {
-  return `<div style="overflow-x:auto"><table><thead><tr><th>Invoice</th><th>Vendor</th><th>Request</th><th>PO</th><th class="num">Invoice</th><th class="num">PO</th><th class="num">Approved</th><th>Match</th><th>Payment</th><th></th></tr></thead><tbody>
+  return `<div style="overflow-x:auto"><table><thead><tr><th>Invoice · vendor</th><th>Request · PO</th><th class="num">Invoice</th><th class="num">PO</th><th class="num">Approved</th><th>Match</th><th>Payment</th></tr></thead><tbody>
     ${list.map((i) => {
       const r = reqById(i.request);
       const po = state.pos.find((p) => p.po && p.po === i.po);
       const m = matchStatus(i);
       const payable = i.status === "Open" && po && (!state.settings.threeWay || m.key === "matched");
-      let payCell = i.status === "Paid" ? `<span class="pill ok">Paid ${money(i.paid_amount)}</span>` : i.status === "On hold" ? '<span class="pill warn">On hold</span>' : i.status === "Recovery requested" ? '<span class="pill info">Recovery requested</span>' : '<span class="pill muted">Open</span>';
+      let payCell = i.status === "Paid" ? `<span class="pill ok">Paid</span> <span class="sub2">${money(i.paid_amount)}</span>` : i.status === "On hold" ? '<span class="pill warn">On hold</span>' : i.status === "Recovery requested" ? '<span class="pill info">Refund requested</span>' : '<span class="pill muted">Open</span>';
       let actions = "";
       if (i.status === "Open" || i.status === "On hold") {
         actions += `<button class="btn small ok" data-pay="${i.id}" ${payable ? "" : "disabled"} title="${payable ? "" : "Blocked: invoice must match PO and approval"}">Pay</button>`;
@@ -524,9 +524,10 @@ function invoiceTable(list) {
       }
       if (m.key === "overpaid" && i.status === "Paid") actions += `<button class="btn small danger" data-recover="${i.id}">Request refund</button>`;
       if (m.key === "underpaid") actions += `<button class="btn small ok" data-paybalance="${i.id}">Pay balance ${money(m.diff)}</button>`;
-      return `<tr><td><b>${i.id}</b></td><td>${esc(i.vendor)}</td><td><a href="#" data-open="${r.id}">${r.id}</a></td><td>${i.po ? esc(i.po) : "—"}</td>
+      return `<tr><td><b>${i.id}</b><div class="sub2">${esc(i.vendor)}</div></td><td><a href="#" data-open="${r.id}">${r.id}</a><div class="sub2">${i.po ? esc(i.po) : "no PO"}</div></td>
         <td class="num">${money(i.amount)}</td><td class="num ${po && Math.abs(po.amount - i.amount) > 0.01 ? "diff" : ""}">${po ? money(po.amount) : "—"}</td><td class="num">${money(r.amount)}</td>
-        <td><span class="pill ${m.cls}">${m.label}${m.diff ? " " + money(m.diff) : ""}</span></td><td>${payCell}</td><td><div class="actions" style="margin:0">${actions}</div></td></tr>`;
+        <td><span class="pill ${m.cls}">${m.label}</span>${m.diff ? `<div class="sub2">${money(m.diff)}</div>` : ""}</td>
+        <td>${payCell}${actions ? `<div class="actions" style="margin:6px 0 0">${actions}</div>` : ""}</td></tr>`;
     }).join("")}
   </tbody></table></div>`;
 }
