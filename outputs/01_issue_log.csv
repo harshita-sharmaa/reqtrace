@@ -1,0 +1,6 @@
+issue,requests,dollars,request_ids
+Amount re-keyed wrong in PO log,3,144455.0,"REQ-023, REQ-033, REQ-057"
+Over $5K approved without Finance Director,12,111473.0,"REQ-002, REQ-010, REQ-015, REQ-021, REQ-023, REQ-024, REQ-037, REQ-051, REQ-052, REQ-053, REQ-057, REQ-058"
+PO entered with no GL code,8,102962.0,"REQ-007, REQ-017, REQ-025, REQ-026, REQ-035, REQ-047, REQ-057, REQ-059"
+Approved with no PO number,7,41596.0,"REQ-002, REQ-009, REQ-010, REQ-017, REQ-027, REQ-037, REQ-056"
+Duplicate resubmission,3,6036.0,"REQ-061, REQ-062, REQ-063"

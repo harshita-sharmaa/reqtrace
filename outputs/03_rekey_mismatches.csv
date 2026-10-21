@@ -1,0 +1,4 @@
+request_id,department,item,approved_usd,po_log_usd,ratio,paid
+REQ-057,Admissions,Whiteboards,8706.29,87062.9,10.0,N
+REQ-023,Library,Microphones,7336.33,73363.3,10.0,Y
+REQ-033,Library,Network switch,78.9,7.89,0.1,Y
