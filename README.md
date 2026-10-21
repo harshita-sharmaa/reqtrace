@@ -20,6 +20,12 @@ data/finance_po_log.csv     po_number, request_id, entered_by, entered_on, amoun
 
 63 requests across 6 departments (July–September 2026); 43 approved requests were re-keyed into the finance log.
 
+## Interactive app
+
+[`app/`](app/) is **Westbridge Purchasing**, a clickable mock ERP purchasing module built on the same data. Run the old process with every control off, then switch on the to-be controls (amount routing, required GL, duplicate warning, auto-PO, 3-way match) and fix the exceptions from the Requester, Manager, Finance Director and Finance clerk views. Open `app/index.html`; nothing to install.
+
+![Westbridge Purchasing: exceptions report](app/screenshots/exceptions.png)
+
 ## Deliverables
 
 | # | File | What it is |
@@ -69,4 +75,5 @@ What the analysis shows:
 pip install -r requirements.txt
 python3 src/generate_data.py   # rebuild the synthetic data (same seed, same numbers)
 python3 src/analyze.py         # run the SQL, write outputs/
+python3 src/build_app_data.py  # rebuild app/data.js for the interactive app
 ```
